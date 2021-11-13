@@ -283,10 +283,20 @@ handle_schematics.place_schematic_on_flat_land = function( heightmap, minp, maxp
 		binfo.yoff = 0;
 	end
 
+	-- determine water level from mapgens?
+	local water_level = minetest.get_mapgen_setting("water_level")
+	if(water_level and water_level ~= "") then
+		-- minetest.get_mapgen_setting returns string format (which is
+		-- not very helpful here)
+		water_level = tonumber(water_level)
+	else
+		-- fallback for older mapgens
+		water_level = 0
+	end
+
 	-- ships tend to swim on water
 	if( binfo.is_ship ) then
-		-- TODO: get water level
-		p.y             = 1;
+		p.y             = water_level + 1;
 		-- the ship starts below the water surface
 		p.build_start.y = 1 + binfo.yoff;
 		p.build_end.y   = 1;
@@ -297,11 +307,12 @@ handle_schematics.place_schematic_on_flat_land = function( heightmap, minp, maxp
 	-- shipwrecks need to rest on the ground (more or less); we can also ignore
 	-- the border around them
 	if( binfo.is_submerged ) then
+		local c_air = minetest.get_content_id( 'air' )
 		-- first step: search for all nodes at the bottom of the schematic
 		-- where the shipwreck connects to the ground - and see how deep
 		-- we have to go so that each of these nodes rests on a ground node
 		local chunksize = maxp.x - minp.x + 1;
-		local target_height = 1;
+		local target_height = water_level;
 		for x=1, binfo.sizex do
 		for z=1, binfo.sizez do
 			if(  binfo.scm_data_cache[1][x][z]
@@ -428,7 +439,7 @@ handle_schematics.place_schematic_on_flat_land = function( heightmap, minp, maxp
 	start_pos.bsizez = math.abs(p.build_end.z - start_pos.z)+1;
 	p.start_pos = start_pos;
 	-- last parameter false -> place dirt nodes instead of trying to keep the ground nodes
-	local missing_nodes = handle_schematics.generate_building(start_pos, minp2, maxp2, data, param2_data, a, extranodes, replacements_table, cid, extra_calls, start_pos.building_nr, start_pos.village_id, binfo, cid.c_gravel, keep_ground, scaffolding_only);
+	local missing_nodes = handle_schematics.generate_building(start_pos, minp2, maxp2, data, param2_data, a, extranodes, replacements_table, cid, extra_calls, start_pos.building_nr, start_pos.village_id, binfo, cid.c_gravel, true, false);
 
 	-- store the changed map data
 	vm:set_data(data);
